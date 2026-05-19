@@ -397,10 +397,13 @@ function ChatScreen({ symptom, onBack, onSaved }) {
             type="button"
             onClick={handleSaveAndFinish}
             disabled={saving}
-            className="text-sm font-medium transition-opacity hover:opacity-70 disabled:opacity-40"
-            style={{ color: C.terracotta }}
+            className="transition-opacity hover:opacity-60 disabled:opacity-30 p-1"
+            aria-label="Save & finish"
+            style={{ color: C.textMuted }}
           >
-            {saving ? 'Saving…' : 'Save & finish'}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
           </button>
         </div>
 
@@ -508,6 +511,25 @@ function ChatScreen({ symptom, onBack, onSaved }) {
               <TypingIndicator />
             </div>
           )}
+          {(() => {
+            const last = messages[messages.length - 1]
+            const concluded = !loading && last?.role === 'assistant' && !last?.summary &&
+              (last?.content || '').toLowerCase().includes('possible contributors')
+            if (!concluded) return null
+            return (
+              <div className="flex justify-center pt-1 pb-1">
+                <button
+                  type="button"
+                  onClick={handleSaveAndFinish}
+                  disabled={saving}
+                  className="font-medium rounded-2xl px-6 py-2.5 text-sm transition-opacity hover:opacity-80 disabled:opacity-40"
+                  style={{ background: C.terracotta, color: '#fff' }}
+                >
+                  {saving ? 'Saving…' : 'Save & finish'}
+                </button>
+              </div>
+            )
+          })()}
           <div ref={bottomRef} />
         </div>
 
