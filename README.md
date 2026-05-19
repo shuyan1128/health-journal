@@ -1,16 +1,29 @@
-# React + Vite
+# Health Journal
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A personalized, LLM-powered health journal that helps you track symptoms, identify lifestyle triggers, and discover patterns over time.
 
-Currently, two official plugins are available:
+**Live demo:** https://health-journal-flax.vercel.app
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## What it does
 
-## React Compiler
+- **Conversational logging** — describe any symptom in your own words, AI asks smart follow-up questions based on time of day and your history
+- **Trigger reasoning** — AI uses general health knowledge and your past logs to ask contextual questions (e.g. morning reflux → asks about last night's meal)
+- **Severity slider** — quick 1–5 scale input for low-friction logging
+- **Calendar history** — color-coded symptom dots sized by severity, tap to view session summary
+- **Pattern analysis** — AI identifies recurring triggers, timing patterns, and co-occurring symptoms across your logs with confidence levels
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech stack
 
-## Expanding the ESLint configuration
+- React + Vite
+- Tailwind CSS
+- Claude API (claude-sonnet-4-6) via Anthropic
+- Vercel serverless functions
+- localStorage (no database — data is private to your browser)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Running locally
+
+1. Clone the repo
+2. `npm install`
+3. Add your Anthropic API key to `.env`: `ANTHROPIC_API_KEY=your_key`
+4. `npm run dev` — app runs at localhost:5173
+5. `node server.js` — proxy runs at localhost:3001
