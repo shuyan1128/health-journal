@@ -293,7 +293,7 @@ function ChatScreen({ symptom, onBack, onSaved }) {
   async function sendToApi(history) {
     setLoading(true)
     try {
-      const res = await fetch('http://localhost:3001/api/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -344,7 +344,7 @@ function ChatScreen({ symptom, onBack, onSaved }) {
         .filter((m) => m.content)
         .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
         .join('\n')
-      const res = await fetch('http://localhost:3001/api/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -736,7 +736,7 @@ function PatternsScreen() {
         .join('\n'),
     }))
     try {
-      const res = await fetch('http://localhost:3001/api/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -778,7 +778,7 @@ function PatternsScreen() {
       summary: entry.summary,
     }))
     try {
-      const res = await fetch('http://localhost:3001/api/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
