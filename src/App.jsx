@@ -1517,6 +1517,7 @@ function TimelineScreen() {
   )
 }
 
+
 function HomeScreen({ onSelectSymptom }) {
   const [input, setInput] = useState('')
   const allLogs = getLogs()
@@ -1629,7 +1630,7 @@ function HomeScreen({ onSelectSymptom }) {
           ) : (
             <div style={{ marginTop: 24 }}>
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: C.textMuted, marginBottom: 10 }}>Recent entries</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {symptoms.map((symptom) => {
                   const color = getSymptomColor(symptom, allSymptoms)
                   return (
@@ -1637,8 +1638,8 @@ function HomeScreen({ onSelectSymptom }) {
                       key={symptom}
                       type="button"
                       onClick={() => onSelectSymptom(symptom)}
-                      className="rounded-xl text-sm font-medium text-left transition-opacity hover:opacity-80"
-                      style={{ background: color + '22', color, border: 'none', padding: '8px 12px' }}
+                      className="rounded-xl font-medium text-left transition-opacity hover:opacity-80"
+                      style={{ background: color + '28', color, border: 'none', padding: '6px 12px', fontFamily: serif, fontStyle: 'italic', fontSize: 15 }}
                     >
                       {symptom}
                     </button>
