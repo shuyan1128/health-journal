@@ -1,8 +1,5 @@
-const STORAGE_KEY = 'health-journal-logs'
-
 export function seedLogs() {
-  const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-  if (existing.length >= 3) return
+  return
 
   const d = (iso) => new Date(iso).getTime()
 
