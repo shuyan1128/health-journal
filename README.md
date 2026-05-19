@@ -2,7 +2,6 @@
 
 A personalized, LLM-powered health journal that helps you track symptoms, identify lifestyle triggers, and discover patterns over time.
 
-**Live demo:** https://health-journal-flax.vercel.app
 
 ## What it does
 
