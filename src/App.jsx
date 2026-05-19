@@ -709,6 +709,58 @@ episodes differing from historical patterns
 - action:
 small observational experiments grounded in evidence`
 
+function renderInline(text) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/)
+  return parts.map((part, i) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={i}>{part.slice(2, -2)}</strong>
+      : part
+  )
+}
+
+function renderMarkdown(text) {
+  const lines = (text || '').split('\n')
+  const elements = []
+  let listItems = []
+  let k = 0
+
+  function flushList() {
+    if (listItems.length === 0) return
+    elements.push(
+      <ul key={k++} style={{ margin: '2px 0 6px 0', paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {listItems.map((item, i) => (
+          <li key={i} style={{ fontSize: 13, lineHeight: 1.5, color: C.text, listStyleType: 'disc' }}>{renderInline(item)}</li>
+        ))}
+      </ul>
+    )
+    listItems = []
+  }
+
+  for (const line of lines) {
+    const t = line.trim()
+    if (!t) { flushList(); continue }
+    if (t.startsWith('## ')) {
+      flushList()
+      elements.push(
+        <p key={k++} style={{ fontSize: 11, fontWeight: 700, color: C.green, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: k > 1 ? 10 : 2, marginBottom: 3 }}>
+          {t.slice(3)}
+        </p>
+      )
+    } else if (t.startsWith('* ') || t.startsWith('- ')) {
+      listItems.push(t.slice(2))
+    } else {
+      flushList()
+      elements.push(
+        <p key={k++} style={{ fontSize: 13, lineHeight: 1.55, color: C.text, margin: '2px 0' }}>
+          {renderInline(t)}
+        </p>
+      )
+    }
+  }
+  flushList()
+  return elements
+}
+
 function getTimeOfDay(timestamp) {
   const h = new Date(timestamp).getHours()
   if (h >= 5 && h < 11) return 'Morning'
@@ -806,7 +858,22 @@ function PatternsScreen() {
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
           max_tokens: 512,
-          system: 'You are a health pattern analyst. The user has logged symptoms and wants to ask a follow-up question about their patterns. Answer gently and specifically based on the data. Never diagnose. Keep your answer concise (2–4 sentences).',
+          system: `You are a health pattern analyst. The user has logged symptoms and wants to ask a follow-up question about their patterns.
+
+If the user asks about seeing a doctor, what to tell a doctor, or how to describe their symptoms to a medical professional, respond using this exact structure with markdown headers:
+
+## Patterns to mention
+- [2-3 specific observed patterns from the logs, 1 sentence each]
+
+## Questions to ask
+- [3-4 specific questions grounded in the findings, 1 sentence each]
+
+## Things to watch for
+- [2-3 hypotheses worth validating, 1 sentence each]
+
+Frame everything as "worth discussing" not "you have". Never diagnose.
+
+For all other questions, answer specifically and gently based on the actual log data. Use markdown for structure when helpful (**bold** for key terms, ## for sections, - for lists). Never diagnose. Be concise and grounded in the logs.`,
           messages: [{ role: 'user', content: `My logs: ${JSON.stringify(summary, null, 2)}\n\nQuestion: ${q}` }],
         }),
       })
@@ -901,8 +968,8 @@ function PatternsScreen() {
               {followUpAnswer && (
                 <div className="flex items-start gap-2">
                   <AiAvatar />
-                  <div className="flex-1 rounded-2xl px-3 py-2.5 text-sm leading-relaxed" style={{ background: C.lightGreen, color: C.text }}>
-                    {followUpAnswer}
+                  <div className="flex-1 rounded-2xl px-3 py-2.5" style={{ background: C.lightGreen, color: C.text }}>
+                    {renderMarkdown(followUpAnswer)}
                   </div>
                 </div>
               )}

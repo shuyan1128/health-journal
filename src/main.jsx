@@ -4,7 +4,9 @@ import './index.css'
 import App from './App.jsx'
 import { seedLogs } from './seedData.js'
 
-seedLogs()
+if (import.meta.env.DEV) {
+  seedLogs()
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
