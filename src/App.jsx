@@ -94,10 +94,16 @@ const C = {
 
 const serif = "'Lora', 'Georgia', serif"
 
+function normaliseLog(row) {
+  const { onset_category, ...rest } = row
+  return { ...rest, onsetCategory: onset_category ?? 'unknown' }
+}
+
 async function saveLogToSupabase(entry, userId) {
+  const { onsetCategory, ...rest } = entry
   const { error } = await supabase
     .from('logs')
-    .upsert({ ...entry, user_id: userId })
+    .upsert({ ...rest, onset_category: onsetCategory ?? 'unknown', user_id: userId })
   if (error) throw error
 }
 
@@ -397,8 +403,13 @@ function ChatScreen({ symptom, onBack, onSaved, logs, onSaveLog }) {
       ? [...messages, { role: 'assistant', summary: summaryCard }]
       : messages
     setMessages(finalMessages)
-    await onSaveLog({ id: timestamp.toString(), symptom, messages: finalMessages, summary: summaryText, timestamp, onsetCategory })
-    onSaved({ symptom, timestamp })
+    try {
+      await onSaveLog({ id: timestamp.toString(), symptom, messages: finalMessages, summary: summaryText, timestamp, onsetCategory })
+      onSaved({ symptom, timestamp })
+    } catch (err) {
+      console.error('Save failed:', err)
+      setSaving(false)
+    }
   }
 
   return (
@@ -1977,12 +1988,12 @@ function App() {
       .from('logs')
       .select('*')
       .order('timestamp', { ascending: false })
-      .then(({ data }) => setLogs(data ?? []))
+      .then(({ data }) => setLogs((data ?? []).map(normaliseLog)))
   }, [user])
 
   async function handleSaveLog(entry) {
     await saveLogToSupabase(entry, user.id)
-    setLogs((prev) => [entry, ...prev.filter((e) => e.id !== entry.id)])
+    setLogs((prev) => [normaliseLog({ ...entry, onset_category: entry.onsetCategory }), ...prev.filter((e) => e.id !== entry.id)])
   }
 
   async function handleDeleteLog(id) {
@@ -2022,7 +2033,7 @@ function App() {
   return (
     <div className="min-h-screen flex flex-col items-center" style={{ background: C.bg }}>
       <div className="w-full max-w-md flex flex-col h-screen">
-        {activeTab === 'home' && <HomeScreen logs={logs} onSelectSymptom={setActiveSymptom} onSignOut={handleSignOut} user={user} onLogsSeeded={() => supabase.from('logs').select('*').order('timestamp', { ascending: false }).then(({ data }) => setLogs(data ?? []))} />}
+        {activeTab === 'home' && <HomeScreen logs={logs} onSelectSymptom={setActiveSymptom} onSignOut={handleSignOut} user={user} onLogsSeeded={() => supabase.from('logs').select('*').order('timestamp', { ascending: false }).then(({ data }) => setLogs((data ?? []).map(normaliseLog)))} />}
         {activeTab === 'timeline' && <TimelineScreen logs={logs} onDeleteLog={handleDeleteLog} />}
         {activeTab === 'patterns' && <PatternsScreen logs={logs} />}
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
