@@ -1,43 +1,62 @@
 import { useState, useRef, useEffect } from 'react'
+import { createClient } from '@supabase/supabase-js'
+import { seedLogs } from './seedData'
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
 
 const SYSTEM_PROMPT = `You are a calm health journal assistant. Log the user's current symptom episode quickly. Under 1 minute total.
 
 CORE RULES:
 - ONE question at a time, max 1 sentence
 - No filler phrases. No diagnosis. No conclusions.
-- Subtle emojis only: 🌙 💧 ☕ 🍜 — sparingly
-- For any 1–5 scale question, say exactly: "X on a scale of 1–5?" — UI renders a slider
+- Plain text only. Never use markdown formatting (no **, no ---, no headers, no bullet recaps) in any response.
+- After the SYNTHESIS line in step 5, output nothing else. Do not add a recap, timestamp, or restated field list — the app generates that separately.
+- For the severity question, say exactly: "Severity on a scale of 1–5? (X)" where X is the matching anchor pair from SEVERITY ANCHORS below, formatted as "1 = ___, 5 = ___" — still one sentence, still renders as a slider
+- For any other 1–5 scale question (e.g. sleep, stress), say exactly: "X on a scale of 1–5?" — no anchor needed, UI renders a slider
 - Numbered lists for options (1. option per line)
+- Never state a trigger as certain. Use "often reported after," "commonly associated with," or "may be worth tracking alongside" — never "this caused" or "this is why."
 
-REASONING APPROACH:
-Do NOT follow a generic trigger checklist. Instead, reason from context:
-- What time of day is it? Morning reflux → ask about last night's meal/sleep. Evening reflux → ask about today's meals.
-- What did the user already mention? Use that to form the next question.
-- Think like a detective: what happened in the hours BEFORE this symptom that could be relevant?
-- Ask about the most likely cause first, not all possible causes.
+SEVERITY ANCHORS (pick the pair matching the symptom's category — keeps ratings consistent across entries and comparable over time):
+- Digestive: 1 = barely noticeable, 5 = can't focus on anything else
+- Head: 1 = mild ache, 5 = debilitating, need to lie down
+- Energy: 1 = slightly low, 5 = can barely function
+- Skin: 1 = barely visible, 5 = painful or spreading
+- Respiratory/ENT: 1 = mild and ignorable, 5 = hard to breathe/hear normally
+- Mood/mental: 1 = mild edge, 5 = overwhelming
+- Unknown: 1 = barely noticeable, 5 = significantly disrupting your day
+
+Current time: {CURRENT_TIME}
+
+REASONING APPROACH: Do NOT follow a generic trigger checklist. Instead, reason from the TRIGGER KNOWLEDGE below:
+- First identify which category the symptom falls into (or reason by analogy if it's not an exact match — e.g. "ears feel full" maps to Respiratory/ENT even though "ear pressure" isn't listed verbatim).
+- Use that category's typical lag window to decide how far back to ask. Cumulative categories need a multi-day lookback, not just "today."
+- Use what the user already told you to form the next question — don't ask everything in the category, just the most likely one first.
+- Think like a detective: given the typical lag for this kind of symptom, what happened in THAT window?
+
+TRIGGER KNOWLEDGE (reason from this, don't recite it as a script):
+- Digestive (reflux, bloating, nausea): meal timing/content, eating speed, caffeine/alcohol, lying down after eating, stress. Mostly single-event, 0-6 hours after eating — ask about the most recent meal first. Exception: cycle-related bloating builds over 1-2 weeks pre-period.
+- Head (tension headache, migraine, brain fog): sleep, hydration, screen time, caffeine, missed meals, stress. Tension headaches are same-day, 30min-24hrs. Migraine timing is noisy — prodrome can start 1-2 days before the headache itself, so check the last 1-2 days, not just today. Brain fog is usually cumulative over 1-2 days of poor sleep or stress — don't just ask about last night, ask about the last couple nights.
+- Energy (fatigue, dizziness): sleep, hydration, food intake, stress, inactivity. These behave differently — treat them separately, not as one bucket. Dizziness is typically single-event, minutes to same-day (standing up, dehydration, low blood sugar, heat) — ask about the last few hours. Fatigue is typically cumulative, building over 2-3 days of sleep debt or stress — ask about sleep across the last several nights, not just last night.
+- Skin (acne, rash): hormonal cycle, diet changes, stress, sleep, new products. Rashes from new products/exposures are single-event, hours to 4 days. Acne/hormonal patterns are cumulative, days to weeks — ask about cycle timing or recent product changes, not "today."
+- Respiratory/ENT (congestion, ear pressure): allergies (pollen, dust, pet, mold), posture, altitude changes, weather. Altitude-related (flying, diving) is immediate/single-event. Allergy-related congestion is same-day with exposure, can feel continuous with repeated exposure over days.
+- Mood/mental (anxiety, irritability): sleep, caffeine, alcohol (next-day "hangxiety," ~12-24hrs), skipped meals/blood sugar, workload, hormonal cycle. Hunger-related dips are fast (0-4 hrs); poor sleep effects show up the next day; cycle-related mood symptoms run 1-2 weeks pre-period.
+-Unknown/unclear symptom: ask timing, then sleep (1–5), stress (1–5), anything unusual today.
 
 QUESTION FLOW:
 1. Ask severity first: "Severity on a scale of 1–5?"
-2. Ask ONE timing/context question based on when they're experiencing it (morning vs afternoon vs evening vs night)
-3. Ask ONE follow-up based on their answer
-4. Ask: "Anything else you think might be related? Even a small thing." — this is the open field
-5. Done. Summarize possible contributors in 1 line, gently.
+2. Ask when it started, as numbered options: "When did this start?"; Use their answer to anchor all later timing reasoning — if they say "yesterday or before," the lag window is measured from THEN, not from the current message time.
+3. Ask ONE question based on the symptom's typical lag window, anchored to the onset time from step 2 (not the current message time) — for example, if onset was "a few hours ago," ask about the hours before that; if "yesterday or before," ask about the last 1-2 days
+4. Ask ONE follow-up based on their answer
+5. Ask: "Anything else you think might be related? Even a small thing." — this is the open field
+5. Done. Summarize possible contributors in 1 line, gently, using only what the user actually said.
 
-TIMING CONTEXT REASONING (use to ask smarter questions, not as a checklist):
-- Morning symptoms → likely related to: previous night (meal timing, alcohol, sleep quality, sleeping position)
-- Midday symptoms → likely related to: morning habits (breakfast, coffee, hydration, stress start of day)
-- Evening symptoms → likely related to: today's meals, afternoon stress, caffeine, energy levels
-- Night symptoms → likely related to: dinner timing/content, day's cumulative stress, hydration throughout day
-
-GENERAL TRIGGER KNOWLEDGE (background reasoning only, not a script):
-Use this only if timing context isn't enough to form a smart question.
-- Digestive (reflux, bloating, nausea): meal timing, food content, eating speed, stress, lying down
-- Head (headache, migraine, brain fog): sleep, hydration, screen time, caffeine, meals, stress
-- Energy (fatigue, dizziness): sleep quality, hydration, food intake, stress, iron/B12
-- Skin (acne, rash): hormonal cycle, diet changes, stress, sleep, new products
-- Respiratory/ENT (ear pressure, congestion): allergies, stress, posture, altitude, jaw
-- Mood/mental (anxiety, stress): sleep, caffeine, workload, social dynamics, exercise
-- Unknown symptom: ask timing, then sleep (1–5), stress (1–5), anything unusual
+ESCALATION CHECK (run silently before step 6 — do not skip): If the symptom is fatigue, dizziness, brain fog, or ear pressure/fullness (these are commonly flagged for medical follow-up if persistent), OR severity is 4-5, OR the user describes it as frequent/recurring/worsening:
+Skip the pattern-detective framing for the summary.
+Instead say something like: "This sounds like something worth mentioning to a doctor, especially if it keeps happening — want me to log it that way?"
+Still log the data normally either way. This is a nudge, not a refusal to log.
 
 PERSONALIZATION:
 Previous logs for this symptom: {PREVIOUS_LOGS}
@@ -45,11 +64,17 @@ If previous logs exist: check if current timing matches past patterns. Reference
 Example: "Last time this was in the morning too — did you eat late the night before again? 🍜"
 If pattern differs: "This one seems to be at a different time than usual 👀 — what's been different today?"
 
-SYNTHESIS (after step 4 only):
+SYNTHESIS (after step 5 only):
 "Possible contributors today: [2–3 specific things based on what they said]"
 Never list generic triggers. Only reflect back what the user actually told you.`
 
-const STORAGE_KEY = 'health-journal-logs'
+const ONSET_OFFSET_HOURS = {
+  just_now: 0,
+  hours_ago: 3,
+  earlier_today: 8,
+  yesterday_or_before: 24,
+  unknown: null,
+}
 
 const C = {
   bg: '#FDF8F3',
@@ -69,22 +94,16 @@ const C = {
 
 const serif = "'Lora', 'Georgia', serif"
 
-function getLogs() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-  } catch {
-    return []
-  }
+async function saveLogToSupabase(entry, userId) {
+  const { error } = await supabase
+    .from('logs')
+    .upsert({ ...entry, user_id: userId })
+  if (error) throw error
 }
 
-function saveLog(entry) {
-  const logs = getLogs()
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([entry, ...logs]))
-}
-
-function deleteLog(id) {
-  const logs = getLogs().filter((e) => e.id !== id)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(logs))
+async function deleteLogFromSupabase(id) {
+  const { error } = await supabase.from('logs').delete().eq('id', id)
+  if (error) throw error
 }
 
 function TypingIndicator() {
@@ -253,8 +272,13 @@ function LogSavedScreen({ symptom, timestamp, onDone }) {
   )
 }
 
-function buildSystemPrompt(symptom) {
-  const matching = getLogs()
+function buildSystemPrompt(symptom, logs) {
+  const now = new Date()
+  const currentTime = now.toLocaleString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+  const matching = (logs ?? [])
     .filter((e) => e.symptom.toLowerCase() === symptom.toLowerCase())
     .slice(0, 3)
   const logsText = matching.length === 0
@@ -265,11 +289,13 @@ function buildSystemPrompt(symptom) {
         const context = entry.summary ?? 'no summary'
         return `Log ${date}: severity ${sev}, context: ${context}`
       }).join('\n')
-  return SYSTEM_PROMPT.replace('{PREVIOUS_LOGS}', logsText)
+  return SYSTEM_PROMPT
+    .replace('{CURRENT_TIME}', currentTime)
+    .replace('{PREVIOUS_LOGS}', logsText)
 }
 
-function ChatScreen({ symptom, onBack, onSaved }) {
-  const [systemPrompt] = useState(() => buildSystemPrompt(symptom))
+function ChatScreen({ symptom, onBack, onSaved, logs, onSaveLog }) {
+  const [systemPrompt] = useState(() => buildSystemPrompt(symptom, logs))
   const [messages, setMessages] = useState([
     { role: 'user', content: symptom },
   ])
@@ -339,6 +365,7 @@ function ChatScreen({ symptom, onBack, onSaved }) {
     const timestamp = Date.now()
     let summaryCard = null
     let summaryText = null
+    let onsetCategory = 'unknown'
     try {
       const transcript = messages
         .filter((m) => m.content)
@@ -350,7 +377,7 @@ function ChatScreen({ symptom, onBack, onSaved }) {
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
           max_tokens: 300,
-          system: 'Extract a structured summary from this health symptom conversation. Return ONLY valid JSON, no other text: {"fields":[{"label":"Symptom","value":"..."},{"label":"Started","value":"..."},{"label":"Severity","value":"..."},{"label":"Context","value":"..."}],"note":"one warm closing sentence"}. If a field was not discussed, use "Not mentioned" as the value.',
+          system: 'Extract a structured summary from this health symptom conversation. Return ONLY valid JSON, no other text: {"fields":[{"label":"Symptom","value":"..."},{"label":"Started","value":"..."},{"label":"Severity","value":"..."},{"label":"Context","value":"..."}],"onset_category":"just_now|hours_ago|earlier_today|yesterday_or_before|unknown","note":"one warm closing sentence"}. The "Started" field value should be the natural-language answer (e.g. "A few hours ago"). The "onset_category" field must be exactly one of the listed enum values, matched to what the user said about when the symptom started — use "unknown" only if truly not discussed. If a field was not discussed, use "Not mentioned" as the value.',
           messages: [{ role: 'user', content: transcript }],
         }),
       })
@@ -361,6 +388,7 @@ function ChatScreen({ symptom, onBack, onSaved }) {
         const parsed = JSON.parse(match[0])
         summaryCard = parsed
         summaryText = parsed.fields?.map((f) => `${f.label}: ${f.value}`).join(', ') ?? null
+        onsetCategory = parsed.onset_category ?? 'unknown'
       }
     } catch {
       // proceed without summary card
@@ -369,7 +397,7 @@ function ChatScreen({ symptom, onBack, onSaved }) {
       ? [...messages, { role: 'assistant', summary: summaryCard }]
       : messages
     setMessages(finalMessages)
-    saveLog({ id: timestamp.toString(), symptom, messages: finalMessages, summary: summaryText, timestamp })
+    await onSaveLog({ id: timestamp.toString(), symptom, messages: finalMessages, summary: summaryText, timestamp, onsetCategory })
     onSaved({ symptom, timestamp })
   }
 
@@ -638,6 +666,10 @@ Good:
 Weak:
 "Coffee and reflux both appear in logs."
 
+ONSET VS. LOG TIME:
+Each log includes "logged_at" (when the entry was saved) and, when known, "estimated_onset_time" (when the symptom actually started, which may be earlier — symptoms are sometimes logged retrospectively).
+Always reason from estimated_onset_time when looking at what happened BEFORE a symptom, NOT logged_at. If estimated_onset_time is null, the onset wasn't captured — treat logged_at as a rough approximation only, and lower confidence accordingly rather than treating it as precise.
+
 PERSONALIZATION:
 Focus on THIS user's patterns.
 Do not give generic wellness advice.
@@ -769,16 +801,44 @@ function getTimeOfDay(timestamp) {
   return 'Night'
 }
 
-function PatternsScreen() {
+function getEffectiveTime(entry) {
+  const offsetHours = ONSET_OFFSET_HOURS[entry.onsetCategory] ?? null
+  if (offsetHours == null) return entry.timestamp
+  return entry.timestamp - offsetHours * 60 * 60 * 1000
+}
+
+const RANGE_OPTIONS = [
+  { key: 'all', label: 'All time' },
+  { key: '6m', label: 'Past 6 months' },
+  { key: '3m', label: 'Past 3 months' },
+  { key: '1m', label: 'Past month' },
+]
+
+function filterLogsByRange(logs, rangeKey) {
+  if (rangeKey === 'all') return logs
+  const days = rangeKey === '6m' ? 180 : rangeKey === '3m' ? 90 : 30
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000
+  return logs.filter((e) => e.timestamp >= cutoff)
+}
+
+function PatternsScreen({ logs: allLogsFromProps }) {
   const [analysis, setAnalysis] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [followUp, setFollowUp] = useState('')
   const [followUpAnswer, setFollowUpAnswer] = useState(null)
   const [followUpLoading, setFollowUpLoading] = useState(false)
-  const hasFired = useRef(false)
-  const logs = getLogs()
+  const [rangeKey, setRangeKey] = useState('all')
+  const allLogs = allLogsFromProps ?? []
+  const logs = filterLogsByRange(allLogs, rangeKey)
   const allSymptoms = [...new Set(logs.map((e) => e.symptom).filter(Boolean))].sort()
+
+  function handleRangeChange(key) {
+    setRangeKey(key)
+    setAnalysis(null)
+    setFollowUpAnswer(null)
+    setError(null)
+  }
 
   const TIME_SLOTS = ['Morning', 'Midday', 'Evening', 'Night']
 
@@ -792,7 +852,7 @@ function PatternsScreen() {
   const timingMap = {}
   for (const entry of logs) {
     if (!timingMap[entry.symptom]) timingMap[entry.symptom] = { Morning: 0, Midday: 0, Evening: 0, Night: 0 }
-    timingMap[entry.symptom][getTimeOfDay(entry.timestamp)]++
+    timingMap[entry.symptom][getTimeOfDay(getEffectiveTime(entry))]++
   }
   const uniqueSymptoms = Object.keys(timingMap).sort()
   const maxTimingCount = Math.max(1, ...Object.values(timingMap).flatMap((v) => Object.values(v)))
@@ -801,14 +861,23 @@ function PatternsScreen() {
     setLoading(true)
     setError(null)
     setAnalysis(null)
-    const summary = logs.map((entry) => ({
-      symptom: entry.symptom,
-      timestamp: new Date(entry.timestamp).toISOString(),
-      conversation: entry.messages
-        .filter((m) => m.content && (m.role !== 'user' || m.content !== entry.symptom))
-        .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-        .join('\n'),
-    }))
+    const summary = logs.map((entry) => {
+      const loggedAt = new Date(entry.timestamp)
+      const offsetHours = ONSET_OFFSET_HOURS[entry.onsetCategory] ?? null
+      const estimatedOnset = offsetHours == null
+        ? null
+        : new Date(loggedAt.getTime() - offsetHours * 60 * 60 * 1000).toISOString()
+      return {
+        symptom: entry.symptom,
+        logged_at: loggedAt.toISOString(),
+        onset_category: entry.onsetCategory ?? 'unknown',
+        estimated_onset_time: estimatedOnset,
+        conversation: entry.messages
+          .filter((m) => m.content && (m.role !== 'user' || m.content !== entry.symptom))
+          .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+          .join('\n'),
+      }
+    })
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -817,7 +886,7 @@ function PatternsScreen() {
           model: 'claude-sonnet-4-6',
           max_tokens: 1024,
           system: PATTERNS_SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: `Here are my symptom logs:\n\n${JSON.stringify(summary, null, 2)}` }],
+          messages: [{ role: 'user', content: `Current time: ${new Date().toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}\n\nHere are my symptom logs:\n\n${JSON.stringify(summary, null, 2)}` }],
         }),
       })
       const data = await res.json()
@@ -834,12 +903,6 @@ function PatternsScreen() {
     }
   }
 
-  useEffect(() => {
-    if (!hasFired.current && logs.length >= 2) {
-      hasFired.current = true
-      runAnalysis()
-    }
-  }, [])
 
   async function handleFollowUp() {
     const q = followUp.trim()
@@ -874,7 +937,7 @@ If the user asks about seeing a doctor, what to tell a doctor, or how to describ
 Frame everything as "worth discussing" not "you have". Never diagnose.
 
 For all other questions, answer specifically and gently based on the actual log data. Use markdown for structure when helpful (**bold** for key terms, ## for sections, - for lists). Never diagnose. Be concise and grounded in the logs.`,
-          messages: [{ role: 'user', content: `My logs: ${JSON.stringify(summary, null, 2)}\n\nQuestion: ${q}` }],
+          messages: [{ role: 'user', content: `Current time: ${new Date().toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}\n\nMy logs: ${JSON.stringify(summary, null, 2)}\n\nQuestion: ${q}` }],
         }),
       })
       const data = await res.json()
@@ -887,11 +950,11 @@ For all other questions, answer specifically and gently based on the actual log 
     }
   }
 
-  if (logs.length < 2) {
+  if (allLogs.length < 2) {
     return (
       <div className="flex-1 flex flex-col px-5 pt-12 pb-4">
         <h1 className="text-2xl font-semibold mb-1" style={{ fontFamily: serif, color: C.text }}>Patterns</h1>
-        <p className="text-sm mb-10" style={{ color: C.textSecondary }}>{logs.length} of 2 logs needed</p>
+        <p className="text-sm mb-10" style={{ color: C.textSecondary }}>{allLogs.length} of 2 logs needed</p>
         <div className="flex-1 flex items-center justify-center">
           <p className="text-sm text-center" style={{ color: C.textMuted }}>
             Log at least 2 symptoms to see patterns.
@@ -903,9 +966,31 @@ For all other questions, answer specifically and gently based on the actual log 
 
   return (
     <div className="flex-1 overflow-y-auto px-5 pt-12 pb-8 flex flex-col gap-5">
-      <div className="shrink-0">
-        <h1 className="text-2xl font-semibold mb-1" style={{ fontFamily: serif, color: C.text }}>Patterns</h1>
-        <p className="text-sm" style={{ color: C.textSecondary }}>{logs.length} log{logs.length !== 1 ? 's' : ''} analyzed</p>
+      <div className="shrink-0 flex flex-col gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold mb-1" style={{ fontFamily: serif, color: C.text }}>Patterns</h1>
+          <p className="text-sm" style={{ color: C.textSecondary }}>
+            {logs.length} log{logs.length !== 1 ? 's' : ''}
+            {rangeKey !== 'all' && ` · ${RANGE_OPTIONS.find((o) => o.key === rangeKey)?.label}`}
+          </p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {RANGE_OPTIONS.map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => handleRangeChange(opt.key)}
+              className="text-xs px-3 py-1.5 rounded-full font-medium transition-all"
+              style={{
+                background: rangeKey === opt.key ? C.text : C.surface,
+                color: rangeKey === opt.key ? C.bg : C.textSecondary,
+                border: `1px solid ${rangeKey === opt.key ? C.text : C.border}`,
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* AI Insights */}
@@ -922,6 +1007,28 @@ For all other questions, answer specifically and gently based on the actual log 
           <button type="button" onClick={runAnalysis} className="self-start text-sm transition-opacity hover:opacity-70" style={{ color: C.textSecondary }}>
             Try again →
           </button>
+        </div>
+      )}
+
+      {!loading && !analysis && !error && logs.length >= 2 && (
+        <div className="rounded-2xl px-4 py-5 flex flex-col items-center gap-3" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+          <p className="text-sm text-center" style={{ color: C.textSecondary }}>
+            Ready to analyze {logs.length} log{logs.length !== 1 ? 's' : ''}.
+          </p>
+          <button
+            type="button"
+            onClick={runAnalysis}
+            className="px-5 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
+            style={{ background: C.green, color: '#fff' }}
+          >
+            Analyze logs
+          </button>
+        </div>
+      )}
+
+      {!loading && !analysis && !error && logs.length < 2 && allLogs.length >= 2 && (
+        <div className="rounded-2xl px-4 py-5" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+          <p className="text-sm text-center" style={{ color: C.textMuted }}>No analysis in this time range. Try a wider range.</p>
         </div>
       )}
 
@@ -1290,7 +1397,7 @@ function ConversationView({ entry, onBack }) {
   )
 }
 
-function TimelineScreen() {
+function TimelineScreen({ logs: logsFromProps, onDeleteLog }) {
   const todayDate = new Date()
   const [viewMode, setViewMode] = useState('week')
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()))
@@ -1298,12 +1405,12 @@ function TimelineScreen() {
   const [viewMonth, setViewMonth] = useState(todayDate.getMonth())
   const [selectedEntry, setSelectedEntry] = useState(null)
   const [readOnlyEntry, setReadOnlyEntry] = useState(null)
-  const [logs, setLogs] = useState(() => getLogs())
+  const logs = logsFromProps ?? []
   const allSymptoms = [...new Set(logs.map((e) => e.symptom).filter(Boolean))].sort()
 
   function handleDelete(id) {
-    deleteLog(id)
-    setLogs((prev) => prev.filter((e) => e.id !== id))
+    onDeleteLog(id)
+    setSelectedEntry(null)
   }
 
   const logsByDate = {}
@@ -1518,12 +1625,13 @@ function TimelineScreen() {
 }
 
 
-function HomeScreen({ onSelectSymptom }) {
+function HomeScreen({ onSelectSymptom, logs, onSignOut, user, onLogsSeeded }) {
   const [input, setInput] = useState('')
-  const allLogs = getLogs()
+  const [seeding, setSeeding] = useState(false)
+  const allLogs = logs ?? []
   const allSymptoms = [...new Set(allLogs.map((e) => e.symptom).filter(Boolean))].sort()
   const symptoms = [...new Map(
-    allLogs
+    [...allLogs]
       .sort((a, b) => b.timestamp - a.timestamp)
       .map((e) => [e.symptom, e.symptom])
   ).values()]
@@ -1547,12 +1655,19 @@ function HomeScreen({ onSelectSymptom }) {
     <div className="flex-1 overflow-y-auto flex flex-col justify-center" style={{ background: C.bg }}>
       <div className="px-4 py-8">
         {/* App title above card */}
-        <p
-          className="px-1 mb-3"
-          style={{ fontFamily: 'Georgia, serif', fontSize: 12, fontWeight: 400, color: C.terracotta, letterSpacing: '0.15em', textTransform: 'uppercase' }}
-        >
-          Health Journal
-        </p>
+        <div className="px-1 mb-3 flex items-center justify-between">
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: 12, fontWeight: 400, color: C.terracotta, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            Health Journal
+          </p>
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="text-xs transition-opacity hover:opacity-60"
+            style={{ color: C.textMuted }}
+          >
+            Sign out
+          </button>
+        </div>
 
         {/* Journal page card */}
         <div
@@ -1624,9 +1739,28 @@ function HomeScreen({ onSelectSymptom }) {
 
           {/* Recent entries */}
           {symptoms.length === 0 ? (
-            <p style={{ fontFamily: serif, fontSize: 13, color: C.textMuted, fontStyle: 'italic', marginTop: 24 }}>
-              Your past entries will appear here.
-            </p>
+            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <p style={{ fontFamily: serif, fontSize: 13, color: C.textMuted, fontStyle: 'italic' }}>
+                Your past entries will appear here.
+              </p>
+              <button
+                type="button"
+                disabled={seeding}
+                onClick={async () => {
+                  setSeeding(true)
+                  try {
+                    await seedLogs(supabase, user.id)
+                    onLogsSeeded()
+                  } finally {
+                    setSeeding(false)
+                  }
+                }}
+                className="self-start text-xs transition-opacity hover:opacity-70 disabled:opacity-40"
+                style={{ color: C.textMuted, textDecoration: 'underline', textUnderlineOffset: 3 }}
+              >
+                {seeding ? 'Loading…' : 'Load demo data'}
+              </button>
+            </div>
           ) : (
             <div style={{ marginTop: 24 }}>
               <p className="text-xs font-medium uppercase tracking-wider" style={{ color: C.textMuted, marginBottom: 10 }}>Recent entries</p>
@@ -1715,20 +1849,162 @@ function TabBar({ activeTab, onTabChange }) {
   )
 }
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: C.bg }}>
+      <TypingIndicator />
+    </div>
+  )
+}
+
+function LoginScreen() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [mode, setMode] = useState('login')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [signedUp, setSignedUp] = useState(false)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    if (mode === 'login') {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) setError(error.message)
+    } else {
+      const { error } = await supabase.auth.signUp({ email, password })
+      if (error) setError(error.message)
+      else setSignedUp(true)
+    }
+    setLoading(false)
+  }
+
+  if (signedUp) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-5" style={{ background: C.bg }}>
+        <div className="w-full max-w-sm text-center flex flex-col gap-3">
+          <p style={{ fontFamily: serif, fontSize: 22, fontWeight: 600, color: C.text }}>Check your email</p>
+          <p style={{ color: C.textSecondary, fontSize: 14 }}>
+            We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then come back and sign in.
+          </p>
+          <button type="button" onClick={() => { setSignedUp(false); setMode('login') }} className="text-sm mt-2 transition-opacity hover:opacity-70" style={{ color: C.textSecondary }}>
+            Back to sign in
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-5" style={{ background: C.bg }}>
+      <div className="w-full max-w-sm flex flex-col gap-6">
+        <div>
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: 12, fontWeight: 400, color: C.terracotta, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Health Journal
+          </p>
+          <h1 style={{ fontFamily: serif, fontSize: 26, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+            {mode === 'login' ? 'Welcome back' : 'Create your journal'}
+          </h1>
+          <p style={{ color: C.textSecondary, fontSize: 14 }}>
+            {mode === 'login' ? 'Sign in to your account' : 'Start tracking your health patterns'}
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="rounded-xl px-4 py-3 text-sm outline-none"
+            style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="rounded-xl px-4 py-3 text-sm outline-none"
+            style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text }}
+          />
+          {error && <p style={{ color: '#B54B2A', fontSize: 13 }}>{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-xl py-3 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50 mt-1"
+            style={{ background: C.green, color: '#fff' }}
+          >
+            {loading ? '…' : mode === 'login' ? 'Sign in' : 'Create account'}
+          </button>
+        </form>
+        <button
+          type="button"
+          onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(null) }}
+          className="text-sm text-center transition-opacity hover:opacity-70"
+          style={{ color: C.textSecondary }}
+        >
+          {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function App() {
+  const [user, setUser] = useState(null)
+  const [logs, setLogs] = useState([])
+  const [authLoading, setAuthLoading] = useState(true)
   const [activeSymptom, setActiveSymptom] = useState(null)
   const [savedInfo, setSavedInfo] = useState(null)
   const [activeTab, setActiveTab] = useState('home')
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setAuthLoading(false)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (!user) { setLogs([]); return }
+    supabase
+      .from('logs')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .then(({ data }) => setLogs(data ?? []))
+  }, [user])
+
+  async function handleSaveLog(entry) {
+    await saveLogToSupabase(entry, user.id)
+    setLogs((prev) => [entry, ...prev.filter((e) => e.id !== entry.id)])
+  }
+
+  async function handleDeleteLog(id) {
+    await deleteLogFromSupabase(id)
+    setLogs((prev) => prev.filter((e) => e.id !== id))
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+  }
+
+  if (authLoading) return <LoadingScreen />
+  if (!user) return <LoginScreen />
 
   if (activeSymptom) {
     return (
       <ChatScreen
         symptom={activeSymptom}
+        logs={logs}
         onBack={() => setActiveSymptom(null)}
-        onSaved={(info) => {
-          setActiveSymptom(null)
-          setSavedInfo(info)
-        }}
+        onSaved={(info) => { setActiveSymptom(null); setSavedInfo(info) }}
+        onSaveLog={handleSaveLog}
       />
     )
   }
@@ -1746,9 +2022,9 @@ function App() {
   return (
     <div className="min-h-screen flex flex-col items-center" style={{ background: C.bg }}>
       <div className="w-full max-w-md flex flex-col h-screen">
-        {activeTab === 'home' && <HomeScreen onSelectSymptom={setActiveSymptom} />}
-        {activeTab === 'timeline' && <TimelineScreen />}
-        {activeTab === 'patterns' && <PatternsScreen />}
+        {activeTab === 'home' && <HomeScreen logs={logs} onSelectSymptom={setActiveSymptom} onSignOut={handleSignOut} user={user} onLogsSeeded={() => supabase.from('logs').select('*').order('timestamp', { ascending: false }).then(({ data }) => setLogs(data ?? []))} />}
+        {activeTab === 'timeline' && <TimelineScreen logs={logs} onDeleteLog={handleDeleteLog} />}
+        {activeTab === 'patterns' && <PatternsScreen logs={logs} />}
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
     </div>

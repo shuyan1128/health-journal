@@ -1,14 +1,12 @@
-export function seedLogs() {
-  return
-
+export async function seedLogs(supabase, userId) {
   const d = (iso) => new Date(iso).getTime()
 
   const logs = [
-    // 1. May 17 — silent acid reflux (3/5, morning)
     {
-      id: String(d('2026-05-17T07:23:00')),
+      id: String(d('2026-06-17T07:23:00')),
       symptom: 'silent acid reflux',
-      timestamp: d('2026-05-17T07:23:00'),
+      timestamp: d('2026-06-17T07:23:00'),
+      onset_category: 'a few hours ago',
       summary: 'Symptom: Silent acid reflux, Started: Morning (7:23am), Severity: 3/5, Context: Coffee on empty stomach, skipped breakfast, poor sleep (2/5)',
       messages: [
         { role: 'user', content: 'silent acid reflux' },
@@ -20,23 +18,14 @@ export function seedLogs() {
         { role: 'user', content: '2 out of 5' },
         { role: 'assistant', content: 'Anything else you think might be related? Even a small thing.' },
         { role: 'user', content: "Skipped breakfast entirely, just wasn't hungry" },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Silent acid reflux' },
-            { label: 'Started', value: 'Morning (7:23am)' },
-            { label: 'Severity', value: '3/5' },
-            { label: 'Context', value: 'Coffee on empty stomach, skipped breakfast, poor sleep (2/5)' },
-          ],
-          note: 'Starting the day with coffee before food is a common trigger — even a few crackers before your first cup could help settle things.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Silent acid reflux' }, { label: 'Started', value: 'Morning (7:23am)' }, { label: 'Severity', value: '3/5' }, { label: 'Context', value: 'Coffee on empty stomach, skipped breakfast, poor sleep (2/5)' }], note: 'Starting the day with coffee before food is a common trigger — even a few crackers before your first cup could help settle things.' } },
       ],
     },
-
-    // 2. May 15 — ear feels blocked (2/5, morning)
     {
       id: String(d('2026-05-15T06:45:00')),
       symptom: 'ear feels blocked',
       timestamp: d('2026-05-15T06:45:00'),
+      onset_category: 'just_now',
       summary: 'Symptom: Ear feels blocked, Started: Morning (6:45am), Severity: 2/5, Context: Left ear muffled, poor sleep (2/5), 2 coffees on empty stomach',
       messages: [
         { role: 'user', content: 'ear feels blocked' },
@@ -48,23 +37,14 @@ export function seedLogs() {
         { role: 'user', content: '2 out of 5' },
         { role: 'assistant', content: 'Anything else that might be related?' },
         { role: 'user', content: "Two coffees already, hadn't eaten anything yet" },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Ear feels blocked' },
-            { label: 'Started', value: 'Morning (6:45am)' },
-            { label: 'Severity', value: '2/5' },
-            { label: 'Context', value: 'Left ear muffled, poor sleep (2/5), 2 coffees on empty stomach' },
-          ],
-          note: 'Ear congestion and acid often travel together — your body may be signaling it needs more rest and a gentler morning routine.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Ear feels blocked' }, { label: 'Started', value: 'Morning (6:45am)' }, { label: 'Severity', value: '2/5' }, { label: 'Context', value: 'Left ear muffled, poor sleep (2/5), 2 coffees on empty stomach' }], note: 'Ear congestion and acid often travel together — your body may be signaling it needs more rest and a gentler morning routine.' } },
       ],
     },
-
-    // 3. May 13 — fatigue (3/5, morning)
     {
       id: String(d('2026-05-13T08:30:00')),
       symptom: 'fatigue',
       timestamp: d('2026-05-13T08:30:00'),
+      onset_category: 'just_now',
       summary: 'Symptom: Fatigue, Started: Morning, Severity: 3/5, Context: Fragmented sleep (5.5h), skipped breakfast, high work stress, caffeine only',
       messages: [
         { role: 'user', content: 'fatigue' },
@@ -76,23 +56,14 @@ export function seedLogs() {
         { role: 'user', content: "Just coffee, haven't eaten yet" },
         { role: 'assistant', content: 'Anything else you think might be related? Even a small thing.' },
         { role: 'user', content: 'Stressful week, been on back-to-back calls since 8am' },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Fatigue' },
-            { label: 'Started', value: 'Morning' },
-            { label: 'Severity', value: '3/5' },
-            { label: 'Context', value: 'Fragmented sleep (5.5h), no breakfast yet, work stress, caffeine only' },
-          ],
-          note: 'Fatigue on top of fragmented sleep and no food can compound quickly — try a short break and something to eat before your next call.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Fatigue' }, { label: 'Started', value: 'Morning' }, { label: 'Severity', value: '3/5' }, { label: 'Context', value: 'Fragmented sleep (5.5h), no breakfast yet, work stress, caffeine only' }], note: 'Fatigue on top of fragmented sleep and no food can compound quickly — try a short break and something to eat before your next call.' } },
       ],
     },
-
-    // 4. May 11 — silent acid reflux (4/5, morning)
     {
       id: String(d('2026-05-11T07:00:00')),
       symptom: 'silent acid reflux',
       timestamp: d('2026-05-11T07:00:00'),
+      onset_category: 'just_now',
       summary: 'Symptom: Silent acid reflux, Started: Morning (7am), Severity: 4/5, Context: Late dinner (10pm) with wine, poor sleep (2/5), ear pressure on waking',
       messages: [
         { role: 'user', content: 'silent acid reflux' },
@@ -104,23 +75,14 @@ export function seedLogs() {
         { role: 'user', content: '2 out of 5' },
         { role: 'assistant', content: 'Anything else that might be related?' },
         { role: 'user', content: 'Woke up with ear pressure too, felt heavy all morning' },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Silent acid reflux' },
-            { label: 'Started', value: 'Morning (7am)' },
-            { label: 'Severity', value: '4/5' },
-            { label: 'Context', value: 'Late dinner (10pm) with wine, poor sleep (2/5), ear pressure on waking' },
-          ],
-          note: 'Late heavy meals with alcohol before lying down are a strong reflux combination — an earlier dinner could make a noticeable difference.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Silent acid reflux' }, { label: 'Started', value: 'Morning (7am)' }, { label: 'Severity', value: '4/5' }, { label: 'Context', value: 'Late dinner (10pm) with wine, poor sleep (2/5), ear pressure on waking' }], note: 'Late heavy meals with alcohol before lying down are a strong reflux combination — an earlier dinner could make a noticeable difference.' } },
       ],
     },
-
-    // 5. May 9 — brain fog (2/5, afternoon)
     {
       id: String(d('2026-05-09T14:00:00')),
       symptom: 'brain fog',
       timestamp: d('2026-05-09T14:00:00'),
+      onset_category: 'hours_ago',
       summary: 'Symptom: Brain fog, Started: Mid-morning (worsening by 2pm), Severity: 2/5, Context: Low hydration (1 glass), continuous screen time since 9am, caffeine-heavy day',
       messages: [
         { role: 'user', content: 'brain fog' },
@@ -132,51 +94,14 @@ export function seedLogs() {
         { role: 'user', content: 'Just one glass I think, mostly coffee' },
         { role: 'assistant', content: 'Anything else you think might be related?' },
         { role: 'user', content: "Been staring at screens since 9am with no real break" },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Brain fog' },
-            { label: 'Started', value: 'Mid-morning (worsening by 2pm)' },
-            { label: 'Severity', value: '2/5' },
-            { label: 'Context', value: 'Low hydration (1 glass), continuous screen time since 9am, caffeine-heavy day' },
-          ],
-          note: 'Brain fog from dehydration and screen fatigue often responds quickly to water and a short walk — worth trying before your next task.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Brain fog' }, { label: 'Started', value: 'Mid-morning (worsening by 2pm)' }, { label: 'Severity', value: '2/5' }, { label: 'Context', value: 'Low hydration (1 glass), continuous screen time since 9am, caffeine-heavy day' }], note: 'Brain fog from dehydration and screen fatigue often responds quickly to water and a short walk — worth trying before your next task.' } },
       ],
     },
-
-    // 6. May 7 — hemorrhoid bleeding (3/5, morning)
-    {
-      id: String(d('2026-05-07T09:15:00')),
-      symptom: 'hemorrhoid bleeding',
-      timestamp: d('2026-05-07T09:15:00'),
-      summary: 'Symptom: Hemorrhoid bleeding, Started: Morning, Severity: 3/5, Context: Light spotting, low fiber intake all week, alcohol previous night, high stress',
-      messages: [
-        { role: 'user', content: 'hemorrhoid bleeding' },
-        { role: 'assistant', content: 'Severity on a scale of 1–5?' },
-        { role: 'user', content: '3 out of 5' },
-        { role: 'assistant', content: 'Was there significant bleeding or just light spotting?' },
-        { role: 'user', content: 'Light spotting on the paper' },
-        { role: 'assistant', content: 'How has your diet been the last few days — any vegetables or fiber?' },
-        { role: 'user', content: "Not really, haven't been eating well this week" },
-        { role: 'assistant', content: 'Anything else that might be related?' },
-        { role: 'user', content: 'Had a couple of drinks last night and stress has been really high' },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Hemorrhoid bleeding' },
-            { label: 'Started', value: 'Morning' },
-            { label: 'Severity', value: '3/5' },
-            { label: 'Context', value: 'Light spotting, low fiber intake all week, alcohol previous night, high stress' },
-          ],
-          note: 'Low fiber and alcohol can both dehydrate and irritate — adding some vegetables and water today could provide relief over the next day or two.',
-        }},
-      ],
-    },
-
-    // 7. May 5 — travel fatigue (4/5)
     {
       id: String(d('2026-05-05T10:00:00')),
       symptom: 'travel fatigue',
       timestamp: d('2026-05-05T10:00:00'),
+      onset_category: 'earlier_today',
       summary: 'Symptom: Travel fatigue, Started: 3 days post-arrival, Severity: 4/5, Context: 10h flight / 8hr time zone shift, sleep 3/5 (early waking), persistent body heaviness',
       messages: [
         { role: 'user', content: 'travel fatigue' },
@@ -188,23 +113,14 @@ export function seedLogs() {
         { role: 'user', content: '3 out of 5 — falling asleep okay but waking early' },
         { role: 'assistant', content: 'Anything else you think might be related?' },
         { role: 'user', content: 'Body still feels heavy and sluggish even though sleep was okay' },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Travel fatigue' },
-            { label: 'Started', value: '3 days post-arrival' },
-            { label: 'Severity', value: '4/5' },
-            { label: 'Context', value: '10h flight / 8hr time zone shift, sleep 3/5 (early waking), body heaviness and sluggishness persisting' },
-          ],
-          note: 'Post-travel fatigue often lingers 3–5 days even when sleep improves — light movement and staying hydrated can help your body readjust faster.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Travel fatigue' }, { label: 'Started', value: '3 days post-arrival' }, { label: 'Severity', value: '4/5' }, { label: 'Context', value: '10h flight / 8hr time zone shift, sleep 3/5 (early waking), body heaviness and sluggishness persisting' }], note: 'Post-travel fatigue often lingers 3–5 days even when sleep improves — light movement and staying hydrated can help your body readjust faster.' } },
       ],
     },
-
-    // 8. May 3 — ear feels blocked (3/5, morning)
     {
       id: String(d('2026-05-03T07:30:00')),
       symptom: 'ear feels blocked',
       timestamp: d('2026-05-03T07:30:00'),
+      onset_category: 'just_now',
       summary: 'Symptom: Ear feels blocked, Started: Morning (7:30am), Severity: 3/5, Context: Throat fullness sensation, poor sleep (2/5), coffee before food, recurring morning pattern',
       messages: [
         { role: 'user', content: 'ear feels blocked' },
@@ -216,23 +132,14 @@ export function seedLogs() {
         { role: 'user', content: 'Sleep was poor, maybe 2/5. Coffee before anything as usual.' },
         { role: 'assistant', content: 'Anything else that might be related?' },
         { role: 'user', content: 'This keeps happening in the morning lately' },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Ear feels blocked' },
-            { label: 'Started', value: 'Morning (7:30am)' },
-            { label: 'Severity', value: '3/5' },
-            { label: 'Context', value: 'Throat fullness sensation, poor sleep (2/5), coffee before food, recurring morning pattern' },
-          ],
-          note: 'The throat and ear fullness combination is often a silent reflux sign — the recurring morning pattern with coffee on an empty stomach is worth addressing.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Ear feels blocked' }, { label: 'Started', value: 'Morning (7:30am)' }, { label: 'Severity', value: '3/5' }, { label: 'Context', value: 'Throat fullness sensation, poor sleep (2/5), coffee before food, recurring morning pattern' }], note: 'The throat and ear fullness combination is often a silent reflux sign — the recurring morning pattern with coffee on an empty stomach is worth addressing.' } },
       ],
     },
-
-    // 9. May 1 — anxiety (3/5, evening)
     {
       id: String(d('2026-05-01T20:00:00')),
       symptom: 'anxiety',
       timestamp: d('2026-05-01T20:00:00'),
+      onset_category: 'earlier_today',
       summary: 'Symptom: Anxiety, Started: Evening, Severity: 3/5, Context: Racing thoughts, chest tightness, poor sleep this week (2/5), high caffeine intake, heavy workload',
       messages: [
         { role: 'user', content: 'anxiety' },
@@ -244,23 +151,14 @@ export function seedLogs() {
         { role: 'user', content: "2 out of 5, mind doesn't stop at night" },
         { role: 'assistant', content: 'Anything else you think might be related?' },
         { role: 'user', content: "Work has been really heavy and I've been drinking a lot of coffee to get through it" },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Anxiety' },
-            { label: 'Started', value: 'Evening' },
-            { label: 'Severity', value: '3/5' },
-            { label: 'Context', value: 'Racing thoughts, chest tightness, poor sleep this week (2/5), high caffeine intake, heavy workload' },
-          ],
-          note: 'Caffeine amplifies anxiety and disrupts sleep, which then increases anxiety — cutting off coffee by noon might help break the cycle.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Anxiety' }, { label: 'Started', value: 'Evening' }, { label: 'Severity', value: '3/5' }, { label: 'Context', value: 'Racing thoughts, chest tightness, poor sleep this week (2/5), high caffeine intake, heavy workload' }], note: 'Caffeine amplifies anxiety and disrupts sleep, which then increases anxiety — cutting off coffee by noon might help break the cycle.' } },
       ],
     },
-
-    // 10. Apr 29 — acid reflux chest tightness (2/5, midday)
     {
       id: String(d('2026-04-29T12:30:00')),
       symptom: 'acid reflux — chest tightness',
       timestamp: d('2026-04-29T12:30:00'),
+      onset_category: 'hours_ago',
       summary: 'Symptom: Acid reflux — chest tightness, Started: Midday (12:30pm), Severity: 2/5, Context: Matcha on empty stomach (~1hr before), stress 3/5, skipped lunch',
       messages: [
         { role: 'user', content: 'acid reflux — chest tightness' },
@@ -272,23 +170,14 @@ export function seedLogs() {
         { role: 'user', content: '3 out of 5' },
         { role: 'assistant', content: 'Anything else you think might be related?' },
         { role: 'user', content: "Didn't eat lunch, just the matcha" },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Acid reflux — chest tightness' },
-            { label: 'Started', value: 'Midday (12:30pm)' },
-            { label: 'Severity', value: '2/5' },
-            { label: 'Context', value: 'Matcha on empty stomach (~1hr before), stress 3/5, skipped lunch' },
-          ],
-          note: 'Matcha is acidic and can trigger reflux on an empty stomach, similar to coffee — pairing it with even a light snack could prevent this.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Acid reflux — chest tightness' }, { label: 'Started', value: 'Midday (12:30pm)' }, { label: 'Severity', value: '2/5' }, { label: 'Context', value: 'Matcha on empty stomach (~1hr before), stress 3/5, skipped lunch' }], note: 'Matcha is acidic and can trigger reflux on an empty stomach, similar to coffee — pairing it with even a light snack could prevent this.' } },
       ],
     },
-
-    // 11. Apr 27 — travel fatigue (3/5)
     {
       id: String(d('2026-04-27T09:00:00')),
       symptom: 'travel fatigue',
       timestamp: d('2026-04-27T09:00:00'),
+      onset_category: 'earlier_today',
       summary: 'Symptom: Travel fatigue, Started: 3 days post-return, Severity: 3/5, Context: 12h trip / 6hr time zone, sleep 3/5, body heaviness, low motivation',
       messages: [
         { role: 'user', content: 'travel fatigue' },
@@ -300,23 +189,14 @@ export function seedLogs() {
         { role: 'user', content: "3 out of 5, sleeping okay but body doesn't feel right" },
         { role: 'assistant', content: 'Anything else that might be related?' },
         { role: 'user', content: 'Just feel heavy and unmotivated, energy is lower than usual' },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Travel fatigue' },
-            { label: 'Started', value: '3 days post-return' },
-            { label: 'Severity', value: '3/5' },
-            { label: 'Context', value: '12h trip / 6hr time zone, sleep 3/5, body heaviness, low motivation' },
-          ],
-          note: 'Return jet lag often hits differently than outbound — your body is still syncing up even when the sleep feels okay.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Travel fatigue' }, { label: 'Started', value: '3 days post-return' }, { label: 'Severity', value: '3/5' }, { label: 'Context', value: '12h trip / 6hr time zone, sleep 3/5, body heaviness, low motivation' }], note: 'Return jet lag often hits differently than outbound — your body is still syncing up even when the sleep feels okay.' } },
       ],
     },
-
-    // 12. Apr 26 — fatigue (3/5, afternoon)
     {
       id: String(d('2026-04-26T15:00:00')),
       symptom: 'fatigue',
       timestamp: d('2026-04-26T15:00:00'),
+      onset_category: 'earlier_today',
       summary: 'Symptom: Fatigue, Started: Afternoon, Severity: 3/5, Context: Low energy and poor focus, low hydration (~2 glasses), 5h sleep, stressful morning meeting',
       messages: [
         { role: 'user', content: 'fatigue' },
@@ -328,23 +208,14 @@ export function seedLogs() {
         { role: 'user', content: 'Maybe two glasses, not much' },
         { role: 'assistant', content: 'Anything else you think might be related?' },
         { role: 'user', content: "Didn't sleep well — maybe 5 hours — and had a stressful meeting this morning" },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Fatigue' },
-            { label: 'Started', value: 'Afternoon' },
-            { label: 'Severity', value: '3/5' },
-            { label: 'Context', value: 'Low energy and poor focus, low hydration (~2 glasses), 5h sleep, stressful morning meeting' },
-          ],
-          note: 'Poor sleep and low hydration together are a reliable fatigue combination — even a glass of water now and a short pause could help.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Fatigue' }, { label: 'Started', value: 'Afternoon' }, { label: 'Severity', value: '3/5' }, { label: 'Context', value: 'Low energy and poor focus, low hydration (~2 glasses), 5h sleep, stressful morning meeting' }], note: 'Poor sleep and low hydration together are a reliable fatigue combination — even a glass of water now and a short pause could help.' } },
       ],
     },
-
-    // 13. Apr 24 — brain fog (3/5, morning)
     {
       id: String(d('2026-04-24T11:00:00')),
       symptom: 'brain fog',
       timestamp: d('2026-04-24T11:00:00'),
+      onset_category: 'hours_ago',
       summary: 'Symptom: Brain fog, Started: Mid-morning, Severity: 3/5, Context: Poor sleep (5h, interrupted), continuous screen time since 8am, low hydration, coffee only',
       messages: [
         { role: 'user', content: 'brain fog' },
@@ -356,23 +227,14 @@ export function seedLogs() {
         { role: 'user', content: 'Yeah, on my laptop since 8am with no break' },
         { role: 'assistant', content: 'Anything else that might be related?' },
         { role: 'user', content: "Haven't drunk anything except coffee" },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Brain fog' },
-            { label: 'Started', value: 'Mid-morning' },
-            { label: 'Severity', value: '3/5' },
-            { label: 'Context', value: 'Poor sleep (5h, interrupted), continuous screen time since 8am, low hydration, coffee only' },
-          ],
-          note: 'All three fog contributors today: sleep debt, screen time, and dehydration — even a short break and a glass of water can lift this.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Brain fog' }, { label: 'Started', value: 'Mid-morning' }, { label: 'Severity', value: '3/5' }, { label: 'Context', value: 'Poor sleep (5h, interrupted), continuous screen time since 8am, low hydration, coffee only' }], note: 'All three fog contributors today: sleep debt, screen time, and dehydration — even a short break and a glass of water can lift this.' } },
       ],
     },
-
-    // 14. Apr 23 — ear feels blocked (2/5, morning)
     {
       id: String(d('2026-04-23T07:00:00')),
       symptom: 'ear feels blocked',
       timestamp: d('2026-04-23T07:00:00'),
+      onset_category: 'just_now',
       summary: 'Symptom: Ear feels blocked, Started: Morning (7am), Severity: 2/5, Context: Right ear fullness, poor sleep (2/5), coffee before food, recurring pattern on low-sleep mornings',
       messages: [
         { role: 'user', content: 'ear feels blocked' },
@@ -384,23 +246,14 @@ export function seedLogs() {
         { role: 'user', content: 'Sleep was bad, 2/5. Coffee before anything else.' },
         { role: 'assistant', content: 'Anything else that might be related?' },
         { role: 'user', content: 'Feels like the same thing that happens on bad sleep mornings' },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Ear feels blocked' },
-            { label: 'Started', value: 'Morning (7am)' },
-            { label: 'Severity', value: '2/5' },
-            { label: 'Context', value: 'Right ear fullness, poor sleep (2/5), coffee before food, recurring pattern on low-sleep mornings' },
-          ],
-          note: 'The pattern of poor sleep → morning coffee → ear pressure is worth tracking — it may point to silent reflux reaching the upper airway.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Ear feels blocked' }, { label: 'Started', value: 'Morning (7am)' }, { label: 'Severity', value: '2/5' }, { label: 'Context', value: 'Right ear fullness, poor sleep (2/5), coffee before food, recurring pattern on low-sleep mornings' }], note: 'The pattern of poor sleep → morning coffee → ear pressure is worth tracking — it may point to silent reflux reaching the upper airway.' } },
       ],
     },
-
-    // 15. Apr 22 — silent acid reflux (2/5, morning)
     {
       id: String(d('2026-04-22T07:30:00')),
       symptom: 'silent acid reflux',
       timestamp: d('2026-04-22T07:30:00'),
+      onset_category: 'just_now',
       summary: 'Symptom: Silent acid reflux, Started: Morning (7:30am), Severity: 2/5, Context: Poor sleep (2/5), dinner at 9pm, coffee before food, low energy',
       messages: [
         { role: 'user', content: 'silent acid reflux' },
@@ -412,51 +265,14 @@ export function seedLogs() {
         { role: 'user', content: 'Yes, first thing as always' },
         { role: 'assistant', content: 'Anything else you think might be related?' },
         { role: 'user', content: 'Low energy too, feeling off generally' },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Silent acid reflux' },
-            { label: 'Started', value: 'Morning (7:30am)' },
-            { label: 'Severity', value: '2/5' },
-            { label: 'Context', value: 'Poor sleep (2/5), dinner at 9pm, coffee before food, low energy' },
-          ],
-          note: 'Even without a heavy meal, eating at 9pm and sleeping poorly can leave you with reflux by morning — especially with morning coffee first.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Silent acid reflux' }, { label: 'Started', value: 'Morning (7:30am)' }, { label: 'Severity', value: '2/5' }, { label: 'Context', value: 'Poor sleep (2/5), dinner at 9pm, coffee before food, low energy' }], note: 'Even without a heavy meal, eating at 9pm and sleeping poorly can leave you with reflux by morning — especially with morning coffee first.' } },
       ],
     },
-
-    // 16. Apr 21 — hemorrhoid bleeding (3/5, morning)
-    {
-      id: String(d('2026-04-21T09:30:00')),
-      symptom: 'hemorrhoid bleeding',
-      timestamp: d('2026-04-21T09:30:00'),
-      summary: 'Symptom: Hemorrhoid bleeding, Started: Morning, Severity: 3/5, Context: Light spotting, low fiber (mostly takeout), alcohol 2 nights prior, high work stress',
-      messages: [
-        { role: 'user', content: 'hemorrhoid bleeding' },
-        { role: 'assistant', content: 'Severity on a scale of 1–5?' },
-        { role: 'user', content: '3 out of 5' },
-        { role: 'assistant', content: 'Significant bleeding or light spotting?' },
-        { role: 'user', content: 'Light spotting again' },
-        { role: 'assistant', content: 'How has fiber been lately — vegetables, wholegrains?' },
-        { role: 'user', content: "Honestly not great, mostly takeout this week" },
-        { role: 'assistant', content: 'Anything else that might be related?' },
-        { role: 'user', content: 'Had a few drinks two nights ago, and work stress is high' },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Hemorrhoid bleeding' },
-            { label: 'Started', value: 'Morning' },
-            { label: 'Severity', value: '3/5' },
-            { label: 'Context', value: 'Light spotting, low fiber (mostly takeout), alcohol 2 nights prior, high work stress' },
-          ],
-          note: 'Consistent fiber and hydration are the most reliable way to reduce flare-ups — even small dietary changes help over a week.',
-        }},
-      ],
-    },
-
-    // 17. Apr 20 — silent acid reflux (3/5, morning)
     {
       id: String(d('2026-04-20T07:00:00')),
       symptom: 'silent acid reflux',
       timestamp: d('2026-04-20T07:00:00'),
+      onset_category: 'just_now',
       summary: 'Symptom: Silent acid reflux, Started: Morning (7am), Severity: 3/5, Context: Late snack (11pm), late bedtime (midnight), sleep 3/5, throat burning on waking, low energy',
       messages: [
         { role: 'user', content: 'silent acid reflux' },
@@ -468,23 +284,14 @@ export function seedLogs() {
         { role: 'user', content: '3 out of 5' },
         { role: 'assistant', content: 'Anything else that might be related?' },
         { role: 'user', content: 'Woke up with a throat burning feeling and low energy' },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Silent acid reflux' },
-            { label: 'Started', value: 'Morning (7am)' },
-            { label: 'Severity', value: '3/5' },
-            { label: 'Context', value: 'Late snack (11pm), late bedtime (midnight), sleep 3/5, throat burning on waking, low energy' },
-          ],
-          note: 'Eating close to bedtime gives the stomach less time to settle before lying down — even a snack before midnight can trigger morning reflux.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Silent acid reflux' }, { label: 'Started', value: 'Morning (7am)' }, { label: 'Severity', value: '3/5' }, { label: 'Context', value: 'Late snack (11pm), late bedtime (midnight), sleep 3/5, throat burning on waking, low energy' }], note: 'Eating close to bedtime gives the stomach less time to settle before lying down — even a snack before midnight can trigger morning reflux.' } },
       ],
     },
-
-    // 18. Apr 18 — silent acid reflux (2/5, morning) — oldest
     {
       id: String(d('2026-04-18T07:15:00')),
       symptom: 'silent acid reflux',
       timestamp: d('2026-04-18T07:15:00'),
+      onset_category: 'just_now',
       summary: 'Symptom: Silent acid reflux, Started: Morning (7:15am), Severity: 2/5, Context: Poor sleep (2/5), ear pressure on waking, coffee before food, typical morning pattern',
       messages: [
         { role: 'user', content: 'silent acid reflux' },
@@ -496,18 +303,13 @@ export function seedLogs() {
         { role: 'user', content: 'Yes, always' },
         { role: 'assistant', content: 'Anything else you think might be related?' },
         { role: 'user', content: 'Not particularly, just the usual morning routine' },
-        { role: 'assistant', summary: {
-          fields: [
-            { label: 'Symptom', value: 'Silent acid reflux' },
-            { label: 'Started', value: 'Morning (7:15am)' },
-            { label: 'Severity', value: '2/5' },
-            { label: 'Context', value: 'Poor sleep (2/5), ear pressure on waking, coffee before food, typical morning pattern' },
-          ],
-          note: 'The combination of reflux and ear pressure on waking is a recognized silent reflux pattern — the acid may be reaching higher than just the esophagus.',
-        }},
+        { role: 'assistant', summary: { fields: [{ label: 'Symptom', value: 'Silent acid reflux' }, { label: 'Started', value: 'Morning (7:15am)' }, { label: 'Severity', value: '2/5' }, { label: 'Context', value: 'Poor sleep (2/5), ear pressure on waking, coffee before food, typical morning pattern' }], note: 'The combination of reflux and ear pressure on waking is a recognized silent reflux pattern — the acid may be reaching higher than just the esophagus.' } },
       ],
     },
   ]
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(logs))
+  const rows = logs.map((log) => ({ ...log, user_id: userId }))
+  const { error } = await supabase.from('logs').upsert(rows)
+  if (error) throw error
+  return logs.length
 }
